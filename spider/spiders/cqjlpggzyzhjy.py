@@ -10,15 +10,11 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
 
     def start_requests(self):
         urls = [
-            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001001/MoreInfo.aspx?CategoryNum=003001001001'
+            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001001/MoreInfo.aspx?CategoryNum=003001001001',
+            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001002/MoreInfo.aspx?CategoryNum=003001001002'
         ]
-        #for url in urls:
-        #    yield scrapy.Request(url=url, callback=self.parse_parameters)
-
-        url = 'http://www.cqjlpggzyzhjy.gov.cn/cqjl/InfoDetail/Default.aspx?InfoID=0dd5c89b-e503-42d6-8137-cdbe7275c4e1&CategoryNum=003001001001'
-        # url = 'http://www.cqjlpggzyzhjy.gov.cn/cqjl/infodetail/?infoid=847fdddf-3bd2-4532-92bc-ca0b11759379&categoryNum=003001001001'
-        yield scrapy.Request(url=url, callback=self.parse)
-
+        for url in urls:
+            yield scrapy.Request(url=url, callback=self.parse_parameters)
 
 
     def parse_parameters(self, response):
@@ -59,18 +55,18 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
         item = SpiderItem()
 
         soup = BeautifulSoup(response.body, 'html.parser')
-        soup_title = soup.find(id='tdTitle').div
 
+        soup_type = soup.find(id='lastfont')
+        item['category'] = soup_type.string.strip()
+
+        soup_title = soup.find(id='tdTitle').div
         item['title'] = soup_title.font.b.string.strip()
-        # self.log('title %s' % (title))
 
         soup_title = soup_title.next_sibling.next_sibling
         item['date'] = soup_title.get_text().split('\r\n')[1].strip()
-        # self.log('date %s' % (date))
 
         soup_content = soup.find(id='TDContent')
         item['content'] = soup_content.get_text()
-        # self.log('content %s' % (content))
 
         item['file_urls'] = []
         item['file_names'] = []
@@ -78,7 +74,4 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
         for soup_file in soup_files:
             item['file_urls'].append(response.urljoin(soup_file.attrs['href']))
             item['file_names'].append(soup_file.get_text().strip())
-
-            # self.log('url %s' % (url))
-            # self.log('url %s' % (file_name))
         return item

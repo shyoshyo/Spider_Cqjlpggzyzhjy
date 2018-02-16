@@ -8,6 +8,9 @@
 
 import hashlib
 import os
+import csv
+
+from spider import settings
 
 from scrapy import Request
 from scrapy.pipelines.files import FilesPipeline
@@ -16,7 +19,6 @@ from scrapy.utils.python import to_bytes
 
 class SpiderPipeline(object):
     def process_item(self, item, spider):
-        print('!!!!!!!! SpiderPipeline')
         spider.log(item)
         return None
         return item
@@ -35,9 +37,16 @@ class MyFilesPipeline(FilesPipeline):
 
 
     def get_media_requests(self, item, info):
-        print('!!!!!!!! MyFilesPipeline')
         for file_url, file_name in zip(item['file_urls'], item['file_names']):
             meta = {'file_name': file_name}
             yield Request(url=file_url, meta=meta)
 
+    def process_item(self, item, spider):
+        FilesPipeline.process_item(self, item, spider)
+
+        print(item)
+
+        with open(settings.CSV_PATH, 'a', newline='', encoding='utf-8') as csv_file:
+            writer = csv.writer(csv_file, delimiter=';')
+            writer.writerow([item[key] for key in item.keys()])
 

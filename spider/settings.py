@@ -73,6 +73,8 @@ FILES_STORE = 'data/'
 DOWNLOAD_TIMEOUT = 12 * 60 * 60
 MEDIA_ALLOW_REDIRECTS = True
 
+CSV_PATH = 'data/list.csv'
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True
