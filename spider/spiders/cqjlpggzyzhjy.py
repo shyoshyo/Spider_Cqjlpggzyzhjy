@@ -74,4 +74,6 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
         for soup_file in soup_files:
             item['file_urls'].append(response.urljoin(soup_file.attrs['href']))
             item['file_names'].append(soup_file.get_text().strip())
+        
+        item['url'] = response.url
         return item

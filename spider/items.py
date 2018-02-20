@@ -21,3 +21,5 @@ class SpiderItem(scrapy.Item):
     file_names = scrapy.Field()
     files = scrapy.Field()
 
+    url = scrapy.Field()
+
