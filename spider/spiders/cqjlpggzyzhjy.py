@@ -19,39 +19,49 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
 
     def parse_parameters(self, response):
         soup = BeautifulSoup(response.body, 'html.parser')
-        soup = soup.find(id='ctl00')
+        soupCtl00 = soup.find(id='ctl00')
 
-        viewstate = soup.find(id='__VIEWSTATE').attrs['value']
-        viewstategenerator = soup.find(id='__VIEWSTATEGENERATOR').attrs['value']
+        viewstate = soupCtl00.find(id='__VIEWSTATE').attrs['value']
+        viewstategenerator = soupCtl00.find(id='__VIEWSTATEGENERATOR').attrs['value']
 
-        self.log(viewstate[0:10] + ' ' + viewstategenerator)
-        self.log(response.url)
+        soupPager = soup.find(id='MoreInfoList1_Pager').find_all('b')[1]
+        count_pages = int(soupPager.get_text())
 
-        for i in range(1, 2):
+        ## FIXME
+        # for page in range(0, count_pages):
+        for page in range(62, 63):
             yield scrapy.FormRequest(url=response.url,
                         formdata={'__VIEWSTATE': viewstate, '__VIEWSTATEGENERATOR': viewstategenerator,
-                            '__EVENTTARGET': 'MoreInfoList1$Pager', '__EVENTARGUMENT': str(i)},
+                            '__EVENTTARGET': 'MoreInfoList1$Pager', '__EVENTARGUMENT': str(page + 1)},
                         callback=self.parse_list)
-
-
-        # page = response.url.split("/")[-2]
-        # filename = 'quotes-%s.html' % page
-        # with open(filename, 'wb') as f:
-        #     f.write(response.body)
-        # self.log('Saved file %s' % response.body)
-
 
     def parse_list(self, response):
         soup = BeautifulSoup(response.body, 'html.parser')
-        soup = soup.find(id='MoreInfoList1_tdcontent')
-        soup = soup.find_all('a')
+        soup_list = soup.find(id='MoreInfoList1_tdcontent')
+        soup_list = soup_list.find_all('a')
+        soup_type = soup.find(id='lastfont')
 
-        for i in soup:
-            self.log(str(response.urljoin(i.attrs['href'])))
+        for i in soup_list:
+            if 'infodetail' in i.attrs['href'].lower():
+                yield scrapy.Request(url=response.urljoin(i.attrs['href']), callback=self.parse_info)
+            else:
+                item = SpiderItem()
 
-            yield scrapy.Request(url=response.urljoin(i.attrs['href']), callback=self.parse)
+                item['category'] = soup_type.string.strip()
+                item['title'] = i.string.strip()
+                item['date'] = i.parent.next_sibling.string.strip().replace('-', '/')
+                item['content'] = ''
 
-    def parse(self, response):
+                item['file_urls'] = [response.urljoin(i.attrs['href'])]
+                item['file_names'] = ['test.txt']
+
+                item['url'] = response.urljoin(i.attrs['href'])
+
+                yield item
+
+
+
+    def parse_info(self, response):
         item = SpiderItem()
 
         soup = BeautifulSoup(response.body, 'html.parser')
