@@ -11,7 +11,9 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
     def start_requests(self):
         urls = [
             'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001001/MoreInfo.aspx?CategoryNum=003001001001',
-            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001002/MoreInfo.aspx?CategoryNum=003001001002'
+            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/jyxx/003001/003001001/003001001002/MoreInfo.aspx?CategoryNum=003001001002',
+            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/ZtbWebDyProject/DaYi_List.aspx',
+            'http://www.cqjlpggzyzhjy.gov.cn/cqjl/ZtbWebDyProject/BuYiAll_List.aspx'
         ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse_parameters)
@@ -19,17 +21,20 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
 
     def parse_parameters(self, response):
         soup = BeautifulSoup(response.body, 'html.parser')
-        soupCtl00 = soup.find(id='ctl00')
+        soupCtl = soup.find(id='ctl00') or soup.find(id='Form1')
 
-        viewstate = soupCtl00.find(id='__VIEWSTATE').attrs['value']
-        viewstategenerator = soupCtl00.find(id='__VIEWSTATEGENERATOR').attrs['value']
+        viewstate = soupCtl.find(id='__VIEWSTATE').attrs['value']
+        viewstategenerator = soupCtl.find(id='__VIEWSTATEGENERATOR').attrs['value']
 
-        soupPager = soup.find(id='MoreInfoList1_Pager').find_all('b')[1]
-        count_pages = int(soupPager.get_text())
+        soupPager1 = soup.find(id='MoreInfoList1_Pager')
+        page1 = soupPager1 and soupPager1.find_all('b')[1].get_text()
 
-        ## FIXME
-        # for page in range(0, count_pages):
-        for page in range(62, 63):
+        soupPager2 = soup.find(id='Pager')
+        page2 = soupPager2 and soupPager2.find_all('b')[0].get_text()
+
+        count_pages = int(page1 or page2)
+
+        for page in range(0, count_pages):
             yield scrapy.FormRequest(url=response.url,
                         formdata={'__VIEWSTATE': viewstate, '__VIEWSTATEGENERATOR': viewstategenerator,
                             '__EVENTTARGET': 'MoreInfoList1$Pager', '__EVENTARGUMENT': str(page + 1)},
@@ -37,13 +42,15 @@ class CqjlpggzyzhjySpider(scrapy.Spider):
 
     def parse_list(self, response):
         soup = BeautifulSoup(response.body, 'html.parser')
-        soup_list = soup.find(id='MoreInfoList1_tdcontent')
+        soup_list = soup.find(id='MoreInfoList1_tdcontent') or soup.find(id='DataGrid1')
         soup_list = soup_list.find_all('a')
         soup_type = soup.find(id='lastfont')
 
         for i in soup_list:
             if 'infodetail' in i.attrs['href'].lower():
                 yield scrapy.Request(url=response.urljoin(i.attrs['href']), callback=self.parse_info)
+            elif 'buyi_list' in i.attrs['href'].lower():
+                yield scrapy.Request(url=response.urljoin(i.attrs['href']), callback=self.parse_parameters)
             else:
                 item = SpiderItem()
 
